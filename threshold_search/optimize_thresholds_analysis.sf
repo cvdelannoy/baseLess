@@ -1,0 +1,122 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import re
+import tarfile
+from os.path import basename, splitext
+
+# --- input ---
+ground_truth_csv = '{{ ground_truth_csv }}'
+
+# --- output ---
+out_dir = '{{ out_dir }}'
+logits_dir = '{{ logits_dir }}'
+thresholded_dir = '{{ thresholded_dir }}'
+histograms_dir = '{{ histograms_dir }}'
+model_dir = '{{ model_dir }}'
+
+# --- params ---
+__baseless__ = '{{ __baseless__ }}'
+species_list = {{ species_list }}
+logit_threshold_list = {{ logit_threshold_list }}
+kmer_threshold_list = np.arange(0.0, 1.05, 0.05)
+
+
+rule combine:
+    input:
+        thresholded_csvs=expand("{{thresholded_dir}}{logit_threshold}.csv", logit_threshold=logit_threshold_list),
+        ground_truth_csv=ground_truth_csv
+    output:
+        f1_csv=f'{out_dir}f1.csv',
+        precision_csv=f'{out_dir}precision.csv',
+        recall_csv=f'{out_dir}recall.csv',
+        pr_plot=f'{out_dir}pr_plot.svg'
+    run:
+        gt_df = pd.read_csv(input.ground_truth_csv).set_index('file_name')
+
+        tp_df = pd.DataFrame(index=logit_threshold_list, columns=kmer_threshold_list)
+        predPos_df = tp_df.copy()
+        pos_df = tp_df.copy()
+
+        # count nb of kmer models for each species
+        nb_kmers_dict = {}
+        for species in species_list:
+            with tarfile.open(f'{model_dir}{species}/compiled.mod') as fh:
+                nb_kmers_dict[species] = len(fh.getmembers())
+
+        sp_dict = {sp: i for i, sp in enumerate(species_list)}
+        max_idx = len(species_list)
+        gt_df.loc[:, 'species_numeric'] = gt_df.species_short.apply(lambda x: sp_dict.get(x,max_idx))
+        h_idx, v_idx = np.arange(len(gt_df)), gt_df.species_numeric
+        bool_mat = np.zeros((len(gt_df), len(species_list) + 1),dtype=bool)
+        bool_mat[h_idx, v_idx] = True
+        gt_bool_df = pd.DataFrame(bool_mat[:, :-1],index=gt_df.index,columns=species_list)
+
+        for csv in input.thresholded_csvs:
+            lt = splitext(basename(csv))[0]
+            thresholded_df = pd.read_csv(csv,index_col=0)
+            thresholded_frac_df = thresholded_df.apply(lambda x: x / nb_kmers_dict[x.name], axis=0)
+            thresholded_mat = thresholded_df.to_numpy()
+            max_k_counts = thresholded_mat.max(axis=1)  # for each read, find which model found max number of kmers
+            nb_kmers = thresholded_mat.max()
+            gt_bool_mat = gt_bool_df.loc[thresholded_df.index, :].to_numpy()
+            for i in kmer_threshold_list:
+                thd = (thresholded_frac_df > i).to_numpy()
+                tp_df.loc[lt, i] = thd[gt_bool_mat].sum()
+                predPos_df.loc[lt, i] = thd.sum()
+                pos_df = gt_bool_mat.sum()
+
+            thresholded_df.loc[:, 'pred_species'] = thresholded_df.idxmax(axis=1)
+            thresholded_df.loc[:, 'ground_truth'] = gt_df.loc[thresholded_df.index, 'species_short']
+            thresholded_df.loc[:, 'pred_correct'] = thresholded_df.pred_species == thresholded_df.ground_truth
+
+            pos_kmer_counts = max_k_counts[thresholded_df.pred_correct]
+            neg_kmer_counts = max_k_counts[np.invert(thresholded_df.pred_correct)]
+            all_kmer_counts = np.concatenate((pos_kmer_counts, neg_kmer_counts))
+
+            plot_df = pd.DataFrame({'kmer_count': all_kmer_counts,
+                                    'correct': [True] * len(pos_kmer_counts) + [False] * len(neg_kmer_counts)})
+            fig = plt.Figure(figsize=(10, 10),dpi=400)
+            sns.histplot(x='kmer_count',hue='correct',data=plot_df,bins=np.arange(1,plot_df.kmer_count.max() + 1))
+            plt.savefig(f'{histograms_dir}hist_logitThreshold{lt}.svg')
+            plt.clf(); plt.close(fig)
+        precision_df = tp_df / predPos_df
+        recall_df = tp_df / pos_df
+        f1_df = ((precision_df ** -1 + recall_df ** -1) / 2) ** -1
+        precision_df.to_csv(output.precision_csv)
+        recall_df.to_csv(output.recall_csv)
+        f1_df.to_csv(output.f1_csv)
+        f1_log, f1_k = f1_df[f1_df == f1_df.max().max()].stack().index.tolist()[0]
+        max_coords = (float(recall_df.loc[f1_log, f1_k].mean()), float(precision_df.loc[f1_log, f1_k].mean()))
+
+        re_melted_df = recall_df.reset_index().melt(id_vars='index').rename({'index': 'logit',
+                                                                             'variable': 'k',
+                                                                             'value': 'recall'},axis=1).set_index(['logit', 'k'])
+        pr_melted_df = precision_df.reset_index().melt(id_vars='index').rename({'index': 'logit',
+                                                                                'variable': 'k',
+                                                                                'value': 'precision'},axis=1).set_index(['logit', 'k'])
+        melted_df = pd.concat((re_melted_df, pr_melted_df),axis=1)
+        k_list = list(recall_df.columns)
+        k_half = k_list[len(k_list) // 2]
+        melted_df.reset_index(inplace=True)
+        melted_df.k = melted_df.k.astype(str)
+        sns.lineplot(data=melted_df,x='recall',y='precision',hue='k')
+        plt.plot(max_coords[0],max_coords[1],'ro')
+        plt.text(*max_coords,f'F1_max={round(f1_df.max().max(),3)}')
+        plt.savefig(output.pr_plot, dpi=400)
+
+
+rule apply_thresholds:
+    input:
+        logit_csvs=expand("{{logits_dir}}{species}_logits.csv", species=species_list)
+    output:
+        thresholded_csv='{{thresholded_dir}}{logit_threshold}.csv'
+    run:
+        for i, logit_csv in enumerate(input.logit_csvs):
+            species = re.search('[^/]+(?=_logits.csv)', logit_csv).group(0)
+            logit_df = pd.read_csv(logit_csv, index_col=0) > float(wildcards.logit_threshold)
+            if i == 0:
+                hits_df = pd.DataFrame(index=logit_df.index, columns=species_list)
+            hits_df.loc[logit_df.index, species] = logit_df.sum(axis=1)
+        hits_df.to_csv(output.thresholded_csv)

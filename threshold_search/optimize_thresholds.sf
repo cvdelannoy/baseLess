@@ -1,0 +1,78 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import re
+from os.path import basename, splitext
+
+# --- input ---
+all_targets_fasta = '{{ all_targets_fasta }}'
+fast5_train = '{{ fast5_train }}'
+fast5_test = '{{ fast5_test }}'
+ground_truth_csv = '{{ ground_truth_csv }}'
+parameter_file =  '{{ parameter_file }}'
+
+# --- output ---
+out_dir = '{{ out_dir }}'
+target_fastas_dir = '{{ target_fastas_dir }}'
+model_dir = '{{ model_dir }}'
+logits_dir = '{{ logits_dir }}'
+thresholded_dir = '{{ thresholded_dir }}'
+histograms_dir = '{{ histograms_dir }}'
+
+# --- params ---
+__baseless__ = '{{ __baseless__ }}'
+species_list = {{ species_list }}
+logit_threshold_list = {{ logit_threshold_list }}
+
+
+rule target:
+    input:
+        logit_csvs=expand("{{logits_dir}}{species}_logits.csv", species=species_list)
+
+rule run_inference:
+    input:
+        model='{{model_dir}}{species}/compiled.mod'
+    output:
+        logit_csv='{{logits_dir}}{species}_logits.csv'
+    shell:
+        """
+        python {__baseless__}/threshold_search/run_logit_inference.py \
+            --model {input.model} \
+            --fast5-in {fast5_test} \
+            --out-csv {output.logit_csv}
+        """
+
+rule compile_model:
+    input:
+        species_seq_fasta='{{target_fastas_dir}}{species}.fasta'
+    output:
+        model='{{model_dir}}{species}/compiled.mod'
+    # threads: max(workflow.cores // len(species_list), 4)
+    threads: workflow.cores // 4
+    shell:
+        """
+        python {__baseless__} compile_model \
+             --target-16S {input.species_seq_fasta} \
+             --out-model {output.model} \
+             --train-required \
+             --training-reads {fast5_train} \
+             --test-reads {fast5_test} \
+             --out-dir {model_dir}{wildcards.species}/ \
+             --cores {workflow.cores} \
+             --parameter-file {parameter_file} {% if uncenter_kmer %} --uncenter-kmer {% endif %} \
+        """
+
+rule parse_species_fasta:
+    input:
+        all_targets_fasta=all_targets_fasta
+    output:
+        species_seq_fasta='{{target_fastas_dir}}{species}.fasta'
+    run:
+        with open(input.all_targets_fasta, 'r') as fh:
+            fa_txt = fh.read()
+        fa_list = ['>'+ fa for fa in fa_txt.split('>')]
+        fa_list = [fa for fa in fa_list if fa.startswith(f'>{wildcards.species}')]
+        fa_txt = '\n'.join(fa_list)
+        with open(output.species_seq_fasta, 'w') as fh:
+            fh.write(fa_txt)

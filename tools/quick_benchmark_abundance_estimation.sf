@@ -1,0 +1,81 @@
+
+# --- input ---
+parameter_file = '{{ parameter_file }}'
+training_read_dir = '{{ training_read_dir }}'
+test_read_dir = '{{ test_read_dir }}'
+genomes_dir = '{{ genomes_dir }}'
+
+
+# --- output ---
+benchmark_dir = '{{ benchmark_dir }}'
+inference_dir = '{{ inference_dir }}'
+kmer_list_dir = '{{ kmer_list_dir }}'
+mod_dir = '{{ mod_dir }}'
+logs_dir = '{{ logs_dir }}'
+nn_dir = '{{ nn_dir }}'  # needs to have species-level subfolders created!
+
+# --- params ---
+baseless_location = '{{ baseless_location }}'
+kmer_size = {{ kmer_size }}
+sample_dict = {{ sample_dict }}
+model_size = {{ model_size }}
+nb_repeats = {{ nb_repeats }}
+min_kmer_mod_accuracy= {{ min_kmer_mod_accuracy }}
+
+
+target_list = []
+for sp in sample_dict:
+    for sa in sample_dict[sp]:
+        target_list.extend([f'{inference_dir}inference_{sp}/{sa}/{rep}/abundance_estimation.csv' for rep in range(nb_repeats)])
+
+rule target:
+    input:
+        abundance_files=target_list
+
+rule run_inference:
+    input:
+        fast5_in='{{ test_read_dir }}{species}/{sample}/{rep}',
+        model='{{ mod_dir }}compiled_model_{species}.h5'
+    threads: 3
+    resources:
+        gpu=1
+    benchmark: '{{ benchmark_dir }}benchmark_{species}_sample{sample}_rep{rep}.tsv'
+    params:
+        out_dir='{{ inference_dir }}inference_{species}/{sample}/{rep}'
+    output:
+        out_csv='{{ inference_dir }}inference_{species}/{sample}/{rep}/abundance_estimation.csv'
+    shell:
+        """
+        python {baseless_location} run_inference \
+            --fast5-in {input.fast5_in} \
+            --model {input.model} \
+            --out-dir {params.out_dir} \
+            --inference-mode once > {logs_dir}inference_{wildcards.species}.log
+        """
+
+rule compile_model:
+    input:
+        target_fasta='{{ genomes_dir }}{species}.fasta'
+    threads: workflow.cores
+    params:
+        background_fastas='{{ genomes_dir }}bg_{species}/*'
+    resources:
+        gpu=1
+    output:
+        out_mod='{{ mod_dir }}compiled_model_{species}.h5'
+    shell:
+        """
+        python {baseless_location} compile_model \
+            --target-fasta {input.target_fasta} \
+            --background-fastas {params.background_fastas} \
+            --train-required \
+            --training-reads {training_read_dir} \
+            --out-model {output.out_mod} \
+            --out-dir {nn_dir}{wildcards.species}/ \
+            --nb-kmers {model_size} \
+            --cores {threads} \
+            --model-type abundance \
+            --uncenter-kmer \
+            --accuracy-threshold {min_kmer_mod_accuracy} \
+            --parameter-file {parameter_file} &> {logs_dir}compile_model_{wildcards.species}.log
+        """

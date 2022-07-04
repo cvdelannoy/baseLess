@@ -1,0 +1,9 @@
+# run with docker run -it --rm --runtime nvidia --network host baseless
+
+FROM nvcr.io/nvidia/l4t-tensorflow:r32.6.1-tf2.5-py3
+
+MAINTAINER Carlos de Lannoy <cvdelannoy@gmail.com>
+
+ADD . /baseless
+RUN apt-get update && apt-get install -y vim
+RUN pip3 install --no-cache-dir -r /baseless/requirements_inference_jetson.txt

@@ -1,0 +1,52 @@
+max_nb_params: 35072
+nonvariable:
+  nn_class: Cnn_test
+  max_sequence_length: 1000
+  filter_width: 1000
+
+variable:
+  batch_size:
+    max: 128
+    min: 8
+    step: 8
+    type: int
+  eps_per_kmer_switch:
+    max: 200
+    min: 10
+    step: 10
+    type: int
+#  filter_width:
+#    max: 25
+#    min: 1
+#    step: 1
+#    type: int
+  filters:
+    max: 10
+    min: 1
+    step: 1
+    type: int
+  num_kmer_switches:
+    max: 10
+    min: 1
+    step: 1
+    type: int
+  learning_rate:
+    max: 0.01
+    min: 0.0001
+    step: 0.0001
+    type: float
+  threshold:
+    max: 0.95
+    min: 0.5
+    step: 0.05
+    type: float
+  pool_size:
+    max: 10
+    min: 0
+    step: 2
+    type: int
+  num_batches:
+    max: 320
+    min: 10
+    step: 10
+    type: int

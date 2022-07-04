@@ -1,0 +1,83 @@
+
+# jinja args: location, db_dir, nn_dir, width, hdf_path, uncenter_kmer
+
+__location__ = "{{ __location__ }}"
+db_dir = '{{ db_dir }}'
+nn_dir = '{{ nn_dir }}'
+logs_dir= '{{ logs_dir }}'
+parameter_file = '{{ parameter_file }}'
+filter_width = "{{ filter_width }}"
+hdf_path = '{{ hdf_path }}'
+read_index = '{{ read_index }}'
+
+rule target:
+    input:
+        nns=expand('{{ nn_dir }}{target}/nn.h5', target={{ kmer_list }})
+
+# Use this target rule if you only want to build the dbs and not train the networks
+rule target_dbs:
+    input:
+        expand('{{ db_dir }}train/{target}/db.fs', target={{ kmer_list }}),
+        expand('{{ db_dir }}test/{target}/db.fs', target={{ kmer_list }})
+
+
+rule generate_nns:
+    input:
+        target_db_train='{{ db_dir }}train/{target}/db.fs',
+        target_db_test='{{ db_dir }}test/{target}/db.fs'
+    output:
+        nn='{{ nn_dir }}{target}/nn.h5'
+    threads:
+        1
+    resources:
+        gpu=1
+    shell:
+        """
+        python {__location__} train_nn \
+            --training-db {input.target_db_train} \
+            --test-db {input.target_db_test} \
+            --nn-dir {nn_dir} \
+            --parameter-file {parameter_file} &> {logs_dir}nn_{wildcards.target}.log
+        """
+
+rule generate_training_db:
+    input:
+        reads='{{ train_reads }}'
+    output:
+        db_fs='{{ db_dir }}train/{target}/db.fs'
+    threads:
+        1
+    shell:
+        """
+        python {__location__} build_db \
+            --fast5-in {input.reads} \
+            --db-dir {db_dir}train/{wildcards.target} \
+            --target {wildcards.target} {% if read_index_bool %} --read-index {read_index} {% endif %} \
+            --db-type train \
+            --max-nb-examples 20000 \
+            --width {filter_width} \
+            --hdf-path {hdf_path} \
+            --uncenter-kmer \
+            --randomize &> {logs_dir}db_train_{wildcards.target}.log
+        """
+
+rule generate_test_db:
+    input:
+        reads='{{ train_reads }}'
+    output:
+        db_fs='{{ db_dir }}test/{target}/db.fs'
+    threads:
+        1
+    shell:
+        """
+        mkdir -p {db_dir}test/{wildcards.target}
+        python {__location__} build_db \
+            --fast5-in {input.reads} \
+            --db-dir {db_dir}test/{wildcards.target} \
+            --target {wildcards.target} {% if read_index_bool %} --read-index {read_index} {% endif %} \
+            --db-type test \
+            --width {filter_width} \
+            --hdf-path {hdf_path} \
+            --uncenter-kmer \
+            --randomize &>{logs_dir}db_test_{wildcards.target}.log
+        """

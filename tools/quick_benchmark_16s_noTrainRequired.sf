@@ -1,0 +1,87 @@
+import os
+import pandas as pd
+import numpy as np
+
+baseless_location = "{{ baseless_location }}"
+
+# --- inputs ---
+read_dir = '{{ read_dir }}'
+read_index_fn = '{{ read_index_fn }}'
+ground_truth_fn = '{{ ground_truth_fn }}'
+test_read_dir = '{{ test_read_dir }}'
+target_16s = '{{ target_16s }}'
+
+logs_dir = '{{ logs_dir }}'
+parameter_file = '{{ parameter_file }}'
+
+# --- outputs ---
+out_dir = '{{ out_dir }}'
+nn_dir = '{{ nn_dir }}'
+inference_out_dir = '{{ inference_out_dir }}'
+
+
+rule parse_inference_results:
+    input:
+        inference_out_dir='{{ inference_out_dir }}',
+        index_fold_csv='{{ read_index_fn }}',
+        ground_truth_csv='{{ ground_truth_fn }}'
+    output:
+        inference_list='{{ out_dir }}inference_list.csv',
+        summary='{{out_dir }}summary.csv'
+    run:
+        read_index_df = pd.read_csv(input.index_fold_csv, index_col=0)
+        gt_df = pd.read_csv(input.ground_truth_csv, index_col=0)
+        out_df = pd.DataFrame({'predicted': False}, index=read_index_df.query('fold == False').index)
+        out_df.query(f'read_id in {gt_df.index.to_list()}', inplace=True)
+        for fn in os.listdir(input.inference_out_dir + '/pos_reads/'):
+            idx_name = os.path.basename(fn)
+            if idx_name in out_df.index:
+                out_df.loc[os.path.basename(fn), 'predicted'] = True
+        out_df.loc[:,'pos'] = gt_df.loc[out_df.index, 'pos']
+        out_df.loc[:, 'tp'] = False
+        out_df.loc[np.logical_and(out_df.predicted, out_df.pos), 'tp'] = True
+        recall = out_df.tp.sum() / out_df.pos.sum()
+        precision = out_df.tp.sum() / out_df.predicted.sum()
+        f1 = ((precision ** -1 + recall ** -1) / 2) ** -1
+        running_time = float(pd.read_csv(f'{out_dir}inference_benchmark.tsv', sep='\t').s)
+        with open(output.summary, 'w') as fh:
+            fh.write(f'parameter_file,recall,precision,f1,running_time\n{os.path.basename(parameter_file)},{recall},{precision},{f1},{running_time}')
+        out_df.to_csv(output.inference_list)
+
+rule run_inference:
+    input:
+        fast5_in='{{ read_dir }}',
+        model='{{ out_dir }}compiled_model.h5'
+    # threads: workflow.cores
+    threads: 3
+    benchmark: '{{ out_dir }}inference_benchmark.tsv'
+    output:
+        out_dir=directory('{{ inference_out_dir }}')
+    shell:
+        """
+        python {baseless_location}/inference/run_inference.py \
+            --fast5-in {input.fast5_in} \
+            --model {input.model} \
+            --out-dir {output.out_dir} \
+            --copy-reads \
+            --mem 512 \
+            --inference-mode once > {logs_dir}inference_species.log
+        """
+
+
+rule compile_model:
+    input:
+        target_16s=target_16s,
+        parameter_file=parameter_file,
+    output:
+        out_mod='{{ out_dir }}compiled_model.h5'
+    shell:
+        """
+        python {baseless_location} compile_model \
+            --nn-directory {nn_dir} \
+            --target-16S {input.target_16s} \
+            --out-model {output.out_mod} \
+            --cores {workflow.cores} \
+            --accuracy-threshold 0.80 \
+            --parameter-file {input.parameter_file} &> {logs_dir}compile_model.log
+        """

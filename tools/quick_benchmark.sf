@@ -1,0 +1,152 @@
+import os
+import pandas as pd
+
+baseless_location = "{{ baseless_location }}"
+
+# --- inputs ---
+read_dir = '{{ read_dir }}'
+read_index_fn = '{{ read_index_fn }}'
+test_read_dir = '{{ test_read_dir }}'
+kmer_txt = '{{ kmer_txt }}'
+
+logs_dir = '{{ logs_dir }}'
+parameter_file = '{{ parameter_file }}'
+
+# --- params ---
+filter_width = '{{filter_width }}'
+hdf_path = '{{ hdf_path }}'
+
+
+# --- outputs ---
+out_dir = '{{ out_dir }}'
+db_dir = '{{ db_dir }}'
+nn_dir = '{{ nn_dir }}'
+inference_out_dir = '{{ inference_out_dir }}'
+
+
+rule parse_inference_results:
+    input:
+        inference_out_dir='{{ inference_out_dir }}',
+        index_fold_csv='{{ read_index_fn }}'
+    output:
+        summary_file='{{ out_dir }}inference_summary.csv',
+        stats_file='{{ out_dir }}stats.txt'
+    run:
+        read_index_df = pd.read_csv(input.index_fold_csv, index_col=0)
+        out_df = pd.DataFrame({'is_target': False}, index=read_index_df.query('fold == False').index)
+        for fn in os.listdir(input.inference_out_dir + '/pos_reads/'):
+            out_df.loc[os.path.basename(fn), 'is_target'] = True
+        out_df.to_csv(output.summary_file)
+        tp = len(out_df.query('is_target and tp'))
+        p = len(out_df.query('tp'))
+        pred = len(out_df.query('is_target'))
+        precision = tp / pred
+        recall = tp / p
+        accuracy = tp / len(out_df)
+        with open(output.stats_file, 'w') as fh:
+            fh.write(f'precision: {precision}\nrecall: {recall}\naccuracy: {accuracy}')
+
+rule run_inference:
+    input:
+        fast5_in='{{ test_read_dir }}',
+        model='{{ out_dir }}compiled_model.tar'
+    # threads: workflow.cores
+    threads: 3
+    benchmark: '{{ out_dir }}inference_benchmark.tsv'
+    output:
+        out_dir=directory('{{ inference_out_dir }}')
+    shell:
+        """
+        python {baseless_location} run_inference \
+            --fast5-in {input.fast5_in} \
+            --model {input.model} \
+            --out-dir {output.out_dir}{% if continuous_nn %} --continuous-nn{% endif %} \
+            --inference-mode once > {logs_dir}inference_species.log
+        """
+
+
+rule compile_model:
+    input:
+        kmer_txt='{{ kmer_txt }}',
+        nn_directories=expand("{{nn_dir}}{nn_target}/nn.h5", nn_target={{ nn_target_list }}),
+    params:
+        nn_directory='{{ nn_dir }}'
+    output:
+        out_mod='{{ out_dir }}compiled_model.tar'
+    shell:
+        """
+        python {baseless_location} compile_model \
+            --nn-directory {params.nn_directory} \
+            --kmer-list {input.kmer_txt} \
+            --out-model {output.out_mod} &> {logs_dir}compile_model.log
+        """
+
+
+rule generate_nns:
+    input:
+        target_db_train='{{ db_dir }}train/{target}/db.fs',
+        target_db_test='{{ db_dir }}test/{target}/db.fs'
+    threads: 2
+    output:
+        nn='{{ nn_dir }}{target}/nn.h5'
+    threads:
+        1
+    shell:
+        """
+        python {baseless_location} train_nn \
+            --training-db {input.target_db_train} \
+            --test-db {input.target_db_test} \
+            --plots-path {nn_dir}/{wildcards.target}/plots \
+            --nn-dir {nn_dir} \
+            --parameter-file {parameter_file} &> {logs_dir}nn_{wildcards.target}.log
+        """
+
+
+rule generate_training_db:
+    input:
+        reads='{{ read_dir }}',
+        read_index='{{ read_index_fn }}'
+    output:
+        db_fs='{{ db_dir }}train/{target}/db.fs'
+    threads:
+        1
+    shell:
+        """
+        python {baseless_location} build_db \
+            --fast5-in {input.reads} \
+            --db-type train \
+            --read-index {input.read_index} \
+            --db-dir {db_dir}train/{wildcards.target} \
+            --target {wildcards.target} \
+            --width {filter_width} \
+            --hdf-path {hdf_path} \
+            --randomize \
+            --silent{% if uncenter_kmer %} --uncenter-kmer {% endif %} \
+            --max-nb-examples 10000 \
+            &> {logs_dir}db_train_{wildcards.target}.log 
+        """
+
+rule generate_test_db:
+    input:
+        reads='{{ read_dir }}',
+        read_index='{{ read_index_fn }}'
+    output:
+        db_fs='{{ db_dir }}test/{target}/db.fs'
+    threads:
+        1
+    shell:
+        """
+        mkdir -p {db_dir}test/{wildcards.target}
+        python {baseless_location} build_db \
+            --fast5-in {input.reads} \
+            --db-type test \
+            --read-index {input.read_index} \
+            --db-dir {db_dir}test/{wildcards.target} \
+            --target {wildcards.target} \
+            --width {filter_width} \
+            --hdf-path {hdf_path} \
+            --randomize \
+            --silent{% if uncenter_kmer %} --uncenter-kmer {% endif %} \
+            --max-nb-examples 1000 \
+            &> {logs_dir}db_test_{wildcards.target}.log
+        """

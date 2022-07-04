@@ -1,0 +1,51 @@
+
+# jinja args: location, db_dir, nn_dir, width, hdf_path, uncenter_kmer
+
+__location__ = "{{ __location__ }}"
+db_dir = '{{ db_dir }}'
+logs_dir= '{{ logs_dir }}'
+filter_width = "{{ filter_width }}"
+hdf_path = '{{ hdf_path }}'
+
+rule target:
+    input:
+        target_dbs=expand('{{ db_dir }}{type}/{target}/db.fs', target={{ kmer_list }}, type=['train', 'test'])
+
+rule generate_training_db:
+    input:
+        reads='{{ train_reads }}'
+    output:
+        db_fs='{{ db_dir }}train/{target}/db.fs'
+    threads:
+        1
+    shell:
+        """
+        python {__location__} build_db \
+            --fast5-in {input.reads} \
+            --db-dir {db_dir}train/{wildcards.target} \
+            --target {wildcards.target} \
+            --width {filter_width} \
+            --hdf-path {hdf_path} \
+            --uncenter-kmer \
+            --randomize &> {logs_dir}db_train_{wildcards.target}.log
+        """
+
+rule generate_test_db:
+    input:
+        reads='{{ test_reads }}'
+    output:
+        db_fs='{{ db_dir }}test/{target}/db.fs'
+    threads:
+        1
+    shell:
+        """
+        mkdir -p {db_dir}test/{wildcards.target}
+        python {__location__} build_db \
+            --fast5-in {input.reads} \
+            --db-dir {db_dir}test/{wildcards.target} \
+            --target {wildcards.target} \
+            --width {filter_width} \
+            --hdf-path {hdf_path} \
+            --uncenter-kmer \
+            --randomize &> {logs_dir}db_test_{wildcards.target}.log
+        """
