@@ -1,23 +1,18 @@
-import numpy as np
-import time
-import warnings
-import re
-import h5py
+import sys, re, warnings, time, h5py
 
-from math import nan, log
+import numpy as np
+from math import nan, log, pi
 from pathlib import Path
 from statistics import median
-
-from db_building.ExampleDb import ExampleDb
+from datetime import datetime
 from contextlib import closing
-
 from bokeh.models import ColumnDataSource, LinearColorMapper, LabelSet, Range1d
 from bokeh.plotting import figure
 
-from math import pi
-from datetime import datetime
+sys.path.append(f'{list(Path(__file__).resolve().parents)[1]}')
+from baseLess.db_building.ExampleDb import ExampleDb
+from baseLess.low_requirement_helper_functions import parse_input_path
 
-from low_requirement_helper_functions import parse_input_path
 
 wur_colors = ['#E5F1E4', '#3F9C35']
 categorical_colors = ['#8dd3c7', '#ffffb3', '#bebada', '#fb8072']

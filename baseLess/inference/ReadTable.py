@@ -2,8 +2,8 @@ import h5py
 import numpy as np
 from multiprocessing import Process, Queue
 
-from db_building.TrainingRead import Read
-from inference.ReadManager import ReadManager
+from baseLess.db_building.TrainingRead import Read
+from baseLess.inference.ReadManager import ReadManager
 
 
 def rolling_window(array, window_size,freq):

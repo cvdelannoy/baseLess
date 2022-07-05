@@ -1,6 +1,6 @@
 import argparse
 import os
-from low_requirement_helper_functions import parse_output_path
+from baseLess.low_requirement_helper_functions import parse_output_path
 
 # = ( , {
 #     'type': ,

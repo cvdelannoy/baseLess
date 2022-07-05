@@ -1,4 +1,4 @@
-import sys, signal, os, h5py, shutil
+import sys, signal, os, shutil
 from pathlib import Path
 from datetime import datetime
 import tensorflow as tf

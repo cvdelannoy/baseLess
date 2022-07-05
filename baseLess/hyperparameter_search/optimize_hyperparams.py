@@ -1,16 +1,16 @@
-import os, sys, subprocess, yaml
+import os, subprocess, yaml
 import hyperopt as hp
 from pathlib import Path
 from random import getrandbits
+from hyperopt.mongoexp import MongoTrials
 from functools import partial
-from train_nn import train
 from datetime import datetime
 from jinja2 import Template
 from snakemake import snakemake
-sys.path.append(f'{Path(__file__).resolve()}/..')
-from low_requirement_helper_functions import parse_output_path
-from pathlib import Path
-from hyperopt.mongoexp import MongoTrials
+
+from baseLess.train_nn import train
+from baseLess.low_requirement_helper_functions import parse_output_path
+
 # # Uncomment for debugging:
 # import tensorflow as tf
 # tf.config.experimental_run_functions_eagerly(True)

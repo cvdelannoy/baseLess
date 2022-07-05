@@ -11,9 +11,8 @@ from bokeh.io import save, output_file
 from os.path import basename, splitext
 from datetime import datetime
 
-import reader
-from low_requirement_helper_functions import parse_output_path
-from helper_functions import load_db, plot_timeseries
+from baseLess.low_requirement_helper_functions import parse_output_path
+from baseLess.helper_functions import load_db, plot_timeseries
 
 
 def train(parameter_file, training_data, test_data, plots_path=None,

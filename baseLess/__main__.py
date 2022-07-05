@@ -2,13 +2,11 @@
 import argparse
 import sys
 
-import argparse_dicts
-import train_nn
-from hyperparameter_search import optimize_hyperparams
-from db_building import build_db
-from inference import run_inference
-from inference import compile_model
-import run_production_pipeline
+from baseLess import train_nn, argparse_dicts, run_production_pipeline
+from baseLess.hyperparameter_search import optimize_hyperparams
+from baseLess.db_building import build_db
+from baseLess.inference import run_inference
+from baseLess.inference import compile_model
 
 
 def main(args=None):

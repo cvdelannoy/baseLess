@@ -4,7 +4,7 @@ import yaml
 from snakemake import snakemake
 from jinja2 import Template
 
-from low_requirement_helper_functions import parse_output_path
+from baseLess.low_requirement_helper_functions import parse_output_path
 
 
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))

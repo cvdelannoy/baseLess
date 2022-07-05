@@ -11,7 +11,7 @@ __location__ = dirname(Path(__file__).resolve())
 sys.path.extend([__location__, f'{__location__}/..'])
 from TrainingRead import TrainingRead
 from ExampleDb import ExampleDb
-from low_requirement_helper_functions import parse_output_path, parse_input_path
+from baseLess.low_requirement_helper_functions import parse_output_path, parse_input_path
 
 
 def main(args):

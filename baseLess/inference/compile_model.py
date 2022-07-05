@@ -8,8 +8,8 @@ import tensorflow as tf
 import tensorflow.keras.backend as K
 import numpy as np
 
-from run_production_pipeline import main as rpp
-from inference.diff_abundance_kmers import main as diff_abundance_kmers
+from baseLess.run_production_pipeline import main as rpp
+from baseLess.inference.diff_abundance_kmers import main as diff_abundance_kmers
 __location__ = os.path.realpath(os.path.join(os.getcwd(), os.path.dirname(__file__)))
 
 
