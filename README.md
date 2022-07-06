@@ -4,7 +4,7 @@ BaseLess reduces your MinION sequencing device to a simple species detector. As 
 ## Install
 Install baseLess from conda:
 ```shell
-conda install -c bioconda -c conda-forge baseless
+conda install -c bioconda -c conda-forge -c cvdelannoy baseless
 ```
 Before compiling your first model, you can choose to download pre-generated k-mer models into the default directory of the package (current size <1MB):
 ```shell
@@ -71,15 +71,16 @@ baseLess run_inference \
 - To run on a directory of reads and stop when all reads are analysed, provide `--inference-mode once`. If you do not want the reads to be removed, add `--copy-reads`.
 
 ### Generating k-mer detection networks
-baseLess comes with a pre-generated set of k-mer detection networks, for k-mers that should be particularly salient in the context of 16S detection. We plan to further expand the number of available k-mer networks, however if you have a large read set of a known species and want to generate k-mer networks yourself, you can do so as follows.
+baseLess comes with a pre-generated set of k-mer detection networks, for k-mers that should be particularly salient in the context of 16S detection. We plan to further expand the number of available k-mer networks, however if you have a large read set of a known species, a good reference genome, and you want to generate k-mer networks yourself, you can do so as follows.
 
-Basecall your reads with guppy:
+Basecall your reads with guppy if you haven't yet. If reads were output as multi-fast5, split them using from the [ont-fast5-api](https://pypi.org/project/ont-fast5-api/) package:
+```
+single_to_multi_fast5 -i multi/fast5/input/folder -s single/fast5/output/folder
 ```
 
+Correct your reads with [tombo](https://anaconda.org/bioconda/ont-tombo):
 ```
-Correct your reads with tombo (https://anaconda.org/bioconda/ont-tombo):
-```
-
+tombo resquiggle single/fast5/output/folder reference_genome.fasta
 ```
 
 Use these reads as input for baseLess:
