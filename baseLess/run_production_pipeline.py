@@ -32,7 +32,6 @@ def main(args):
         logs_dir=logs_dir,
         parameter_file=args.parameter_file,
         train_reads=args.training_reads,
-        test_reads=args.test_reads,
         read_index=args.read_index,
         read_index_bool=[True, False][args.read_index is None],
         kmer_list=kmer_list,

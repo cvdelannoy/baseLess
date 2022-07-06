@@ -263,7 +263,7 @@ hyperopt_parallel_jobs = ('--hyperopt-parallel-jobs', {
 def get_run_production_pipeline_parser():
     parser = argparse.ArgumentParser(description='Generate DBs from read sets and generate RNNs for several k-mers '
                                                  'at once')
-    for arg in (training_reads, test_reads, out_dir, kmer_list, cores,
+    for arg in (training_reads, out_dir, kmer_list, cores,
                 parameter_file, hdf_path, uncenter_kmer, read_index):
         parser.add_argument(arg[0], **arg[1])
     return parser
