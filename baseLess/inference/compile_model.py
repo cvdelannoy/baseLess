@@ -250,6 +250,11 @@ def main(args):
         elif args.model_type == 'abundance' and not (args.background_fastas and args.target_fasta):
             raise ValueError('Abundance mode requires providing fastas containing background genomes and the '
                              'target genome with --background-fastas and --target-fasta respectively.')
+    std_kmer_dir = str(Path(__location__).resolve().parents[0]) + '/data/16s_nns/nns/'
+    if args.nn_directory == std_kmer_dir:
+        if not Path(f'{__location__}/../data/16s_nns/.git').exists():
+            raise ValueError(f'Using default k-mer network directory {std_kmer_dir}, however it is not '
+                             f'initiated! First run baseLess update_16s_db')
 
     # --- load nn parameters, list available kmer models ---
     with open(args.parameter_file, 'r') as fh:
@@ -279,7 +284,7 @@ def main(args):
             target_kmer_list = get_kmer_candidates_16S(requested_kmer_dict, args.nb_kmers, 0.0001, filter_list=list(available_mod_dict))
             target_kmer_dict = {km: available_mod_dict.get(km, None) for km in target_kmer_list if km in available_mod_dict}
         if not len(target_kmer_dict):
-            raise ValueError('Sequences do not contain any of available models!')
+            raise ValueError('Sequrequested_kmer_listences do not contain any of available models!')
     elif args.model_type == 'abundance': # for abundance mode
         target_kmer_list, abundance_freq_df, order_dict = diff_abundance_kmers(args.target_fasta, args.background_fastas,
                                                    args.nb_kmers, args.kmer_sizes, args.cores)
@@ -289,7 +294,7 @@ def main(args):
     if args.train_required:
         target_kmer_dict = train_on_the_fly(target_kmer_list, available_mod_dict, args)
     else:
-        target_kmer_dict = {km: available_mod_dict.get(km, None) for km in requested_kmer_list if
+        target_kmer_dict = {km: available_mod_dict.get(km, None) for km in target_kmer_list if
                             km in available_mod_dict}
 
 

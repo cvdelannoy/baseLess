@@ -49,7 +49,10 @@ kmer_list = ('--kmer-list', {
 
 nn_directory = ('--nn-directory', {
     'type': str,
-    'required': False
+    'required': False,
+    'default': f'{__location__ + "/data/16s_nns/nns/"}',
+    'help': f'Directory containing single k-mer detecting neural networks from which baseLess classifiers are '
+            f'constructed [default: {__location__ + "/data/16s_nns/nns/"}]'
 })
 
 model = ('--model', {
@@ -313,8 +316,8 @@ def get_compile_model_parser():
         'type': str,
         'default': 'read_detection',
         'choices': ['read_detection', 'abundance'],
-        'help': 'Specify type of model to compile [binary] to predict presence of fraction of k-mers, [abundance] for'
-                'k-mer abundance estimation [default: binary]'
+        'help': 'Specify type of model to compile [read_detection] to determine identity of in each read, [abundance] for'
+                'k-mer abundance estimation [default: read_detection]'
     })
 
     kmer_list = ('--kmer-list', {
@@ -355,6 +358,7 @@ def get_compile_model_parser():
     for arg in (kmer_list, target_fasta, nn_directory, out_model, nb_kmers, parameter_file, batch_size, model_type,
                 accuracy_threshold, background_fastas):
         parser.add_argument(arg[0], **arg[1])
+
     parser.add_argument('--train-required', action='store_true',
                         help='Train new models as required [default: use only available models]')
 

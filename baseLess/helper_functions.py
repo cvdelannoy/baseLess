@@ -9,7 +9,7 @@ from contextlib import closing
 from bokeh.models import ColumnDataSource, LinearColorMapper, LabelSet, Range1d
 from bokeh.plotting import figure
 
-sys.path.append(f'{list(Path(__file__).resolve().parents)[1]}')
+sys.path.append(f'{list(Path(__file__).resolve().parents)[0]}')
 from baseLess.db_building.ExampleDb import ExampleDb
 from baseLess.low_requirement_helper_functions import parse_input_path
 

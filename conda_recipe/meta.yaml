@@ -6,33 +6,42 @@ package:
 
 source:
   path: ..
-  git_url: https://github.com/cvdelannoy/baseLess.git
+  git_url: git@github.com:cvdelannoy/baseLess.git
 
 build:
   entry_points:
     - baseLess = baseLess.__main__:main
+    - baseLess_inference = baseLess.inference.run_inference:main
+
+extra:
+  channels:
+    - bokeh
+    - bioconda
+    - conda-forge
 
 requirements:
   build:
-    - python
+    - python==3.10
     - setuptools
 
   run:
-    - python >=3.8
-    - matplotlib=3.5.1  # avoid issues with heatmaps
-    - tensorflow-gpu=2.8.1
-    - pandas=1.4.2
-    - bokeh=2.4.3
-    - snakemake=7.8.1
-    - h5py=3.6.0
-    - zodb=5.7.0
-    - hyperopt=0.2.7
-    - seaborn=0.11.2
-    - numpy=1.22.4
-    - pytables=3.7.0
-    - kmer-jellyfish=2.3.0
-    - scikit-learn=1.1.1
-    - fastparquet=0.8.1
+    - python==3.10
+    - setuptools
+    - Cython==0.29.30
+    - matplotlib==3.5.1  # avoid issues with heatmaps
+    - tensorflow-gpu==2.8.1
+    - pandas==1.4.2
+    - bokeh==2.4.3
+    - snakemake==7.8.1
+    - h5py==3.6.0
+    - zodb==5.7.0
+    - hyperopt==0.2.7
+    - seaborn==0.11.2
+    - numpy==1.22.4
+    - pytables==3.7.0
+    - kmer-jellyfish==2.3.0
+    - scikit-learn==1.1.1
+    - fastparquet==0.8.1
 
 about:
   home: https://github.com/cvdelannoy/baseLess

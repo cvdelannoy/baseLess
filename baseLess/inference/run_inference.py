@@ -13,6 +13,12 @@ from argparse_dicts import get_run_inference_parser
 
 def main(args):
 
+    # Copy reads if required
+    if args.copy_reads:
+        fast5_in_new = args.out_dir + 'fast5_in/'
+        shutil.copytree(args.fast5_in, fast5_in_new)
+        args.fast5_in = fast5_in_new
+
     # Limit resources
     os.environ["OMP_NUM_THREADS"] = "1"
     os.environ["TF_NUM_INTRAOP_THREADS"] = "1"
@@ -94,8 +100,4 @@ if __name__ == '__main__':
     parser = get_run_inference_parser()
     args = parser.parse_args()
     _ = parse_output_path(args.out_dir, clean=True)
-    if args.copy_reads:
-        fast5_in_new = args.out_dir + 'fast5_in/'
-        shutil.copytree(args.fast5_in, fast5_in_new)
-        args.fast5_in = fast5_in_new
     main(args)

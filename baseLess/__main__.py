@@ -1,13 +1,15 @@
 #!/usr/bin/python3
 import argparse
 import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from baseLess import train_nn, argparse_dicts, run_production_pipeline
 from baseLess.hyperparameter_search import optimize_hyperparams
 from baseLess.db_building import build_db
 from baseLess.inference import run_inference
 from baseLess.inference import compile_model
-
+from baseLess.tools import update_16s_db
 
 def main(args=None):
     if args is None:
@@ -15,29 +17,27 @@ def main(args=None):
 
     commands = [
         ('run_production_pipeline',
-         'Generate DBs from read set and generate NNs for several k-mers at once',
          argparse_dicts.get_run_production_pipeline_parser(),
          run_production_pipeline.main),
         ('train_nn',
-         'Train a single NN to detect a given k-mer',
          argparse_dicts.get_training_parser(),
          train_nn.main),
         ('hyperparameter_search',
-         'Find best combination of hyperparameters',
          argparse_dicts.get_optimize_hyperparams_parser(),
          optimize_hyperparams.main),
         ('build_db',
-         'Build a training database, to train an NN for a given k-mer',
          argparse_dicts.get_build_db_parser(),
          build_db.main),
         ('run_inference',
-         'Start up inference routine and watch a fast5 directory for reads.',
          argparse_dicts.get_run_inference_parser(),
          run_inference.main),
         ('compile_model',
-         'Compile a multi-network model from single k-mer models, for use in run_inference.',
          argparse_dicts.get_compile_model_parser(),
-         compile_model.main)
+         compile_model.main),
+        ('update_16s_db',
+         argparse.ArgumentParser(description='Update database of standard neural networks. Pulled networks may be '
+                                             'used for any purpose but are particularly useful for 16S detection.'),
+         update_16s_db.main)
     ]
 
     parser = argparse.ArgumentParser(
@@ -48,12 +48,9 @@ def main(args=None):
         title='commands'
     )
 
-    for cmd, hlp, ap, fnc in commands:
+    for cmd, ap, fnc in commands:
         subparser = subparsers.add_parser(cmd, add_help=False, parents=[ap, ])
         subparser.set_defaults(func=fnc)
-
-        # subparser = subparsers.add_parser(cmd, help=hlp, add_help=False, parents=[ap, ])
-        # subparser.set_defaults(func=fnc)
     args = parser.parse_args(args)
     args.func(args)
 
