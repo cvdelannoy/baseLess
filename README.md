@@ -22,7 +22,7 @@ BaseLess determines whether the reads originate from a given target genome or no
 To generate a model:
 ```
 baseLess compile_model \
-  --model-type abundace \
+  --model-type abundance \
   --target-fasta target.fasta \                                # fasta containing target genome
   --background-fastas background1.fasta backgroud2.fasta ... \ # genomes of other species
   --nn-directory directory/of/nns \                            # directory containing NNs
@@ -32,7 +32,7 @@ baseLess compile_model \
 If you have reads of species close to your target species, you can use these as training reads and increase the probability of finding salient k-mers in your training data significantly. In that case, run:
 ```
 baseLess compile_model \
-  --model-type abundace \
+  --model-type abundance \
   --target-fasta target.fasta \                                # fasta containing target genome
   --background-fastas background1.fasta backgroud2.fasta ... \ # genomes of other species
   --nn-directory directory/of/nns \                            # directory containing NNs
@@ -53,7 +53,6 @@ To generate a model:
 baseLess compile_model \
   --model-type read_detection \
   --target-fasta target.fasta \                                # fasta containing one or more 16S sequences
-  --background-fastas background1.fasta backgroud2.fasta ... \ # genomes of other species
   --out-model your_model_name.h5
 ```
 
@@ -66,7 +65,7 @@ baseLess run_inference \
     --model your_model_name.h5 \
     --inference-mode once
 ```
-- In read detection mode, baseLess will only retain fast5's that contain your target. In abundance mode, no reads will be retained.
+- In read detection mode, baseLess will only retain fast5s that contain your target. In abundance mode, no reads will be retained.
 - baseLess will run indefinitely, until stopped manually (`ctrl-c`).
 - To run on a directory of reads and stop when all reads are analysed, provide `--inference-mode once`. If you do not want the reads to be removed, add `--copy-reads`.
 
