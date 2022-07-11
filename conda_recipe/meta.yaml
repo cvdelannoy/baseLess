@@ -8,7 +8,7 @@ source:
   git_url: git@github.com:cvdelannoy/baseLess.git
 
 build:
-#  script: "{{ PYTHON }} -m pip install . -vv"
+  script: "{{ PYTHON }} -m pip install . -vv"
   entry_points:
     - baseLess = baseLess.__main__:main
     - baseLess_inference = baseLess.inference.run_inference:main
