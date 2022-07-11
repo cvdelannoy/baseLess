@@ -2,15 +2,16 @@
 BaseLess reduces your MinION sequencing device to a simple species detector. As a trade-off, it runs on inexpensive computational hardware like single-board computers. The neural network it uses is a composite of many smaller networks, each detecting a different k-mer, thus reconfiguration of baseLess to detect a different sequence amounts to combining different smaller networks. 
 
 ## Install
-Install baseLess from conda:
+Install baseLess from conda, with the much faster [mamba](https://anaconda.org/conda-forge/mamba) drop-in replacement if you have it: 
 ```shell
-conda install -c bioconda -c conda-forge -c cvdelannoy baseless
+mamba install -c bioconda -c conda-forge -c cvdelannoy baseless
 ```
+Otherwise just replace `mamba` by `conda`.  
+
 Before compiling your first model, you can choose to download pre-generated k-mer models into the default directory of the package (current size <1MB):
 ```shell
 baseLess update_16s_db
 ```
-We have generated models for 
 
 ## Running
 ### Abundance mode
