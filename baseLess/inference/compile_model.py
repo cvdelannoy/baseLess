@@ -251,7 +251,7 @@ def main(args):
             raise ValueError('Abundance mode requires providing fastas containing background genomes and the '
                              'target genome with --background-fastas and --target-fasta respectively.')
     std_kmer_dir = str(Path(__location__).resolve().parents[0]) + '/data/16s_nns/nns/'
-    if args.nn_directory == std_kmer_dir:
+    if args.model_type == 'read_detection' and args.nn_directory == std_kmer_dir:
         if not Path(f'{__location__}/../data/16s_nns/.git').exists():
             raise ValueError(f'Using default k-mer network directory {std_kmer_dir}, however it is not '
                              f'initiated! First run baseLess update_16s_db')
