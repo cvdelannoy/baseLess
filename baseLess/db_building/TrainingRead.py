@@ -221,7 +221,7 @@ class TrainingRead(object):
         width_r = width - width_l
         raw_hits_out = []
         raw_kmers_out = []
-        while len(raw_hits_out) < nb: # and idx_list:
+        while len(raw_hits_out) < nb and len(idx_list) > 0:
             cur_idx = choice(idx_list)
             cur_condensed_event = self.condensed_events[cur_idx]
             # Explicitly convert to python integers to prevent overflow error
