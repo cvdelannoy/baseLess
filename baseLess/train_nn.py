@@ -1,5 +1,6 @@
 import random
 import re
+import shutil
 
 import yaml
 import pickle
@@ -137,3 +138,6 @@ def main(args):
                args.model_weights, False, tb_callback)
     nn.model.save(f'{nn_target_dir}nn.h5')
     with open(f'{nn_target_dir}performance.pkl', 'wb') as fh: pickle.dump(nn.history, fh)
+    if args.delete_dbs:
+        shutil.rmtree(args.training_db, ignore_errors=True)
+        shutil.rmtree(args.test_db, ignore_errors=True)

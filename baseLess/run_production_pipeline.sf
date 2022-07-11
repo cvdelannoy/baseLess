@@ -37,6 +37,7 @@ rule generate_nns:
             --training-db {input.target_db_train} \
             --test-db {input.target_db_test} \
             --nn-dir {nn_dir} \
+            --delete-dbs \
             --parameter-file {parameter_file} &> {logs_dir}nn_{wildcards.target}.log
         """
 

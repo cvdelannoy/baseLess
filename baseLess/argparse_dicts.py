@@ -284,9 +284,14 @@ def get_build_db_parser():
 
 
 def get_training_parser():
+    delete_dbs = ('--delete-dbs', {
+        'action': 'store_true',
+        'help': 'Delete train and test databases once training is done, to save space'
+    })
+
     parser = argparse.ArgumentParser(description='Train a network to detect a given k-mer in MinION reads.')
     for arg in (training_db, test_db, nn_dir, tensorboard_path, plots_path, parameter_file,
-                model_weights, ckpt_model):
+                model_weights, ckpt_model, delete_dbs):
         parser.add_argument(arg[0], **arg[1])
     return parser
 
