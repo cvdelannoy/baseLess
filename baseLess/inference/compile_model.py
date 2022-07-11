@@ -260,14 +260,11 @@ def main(args):
     with open(args.parameter_file, 'r') as fh:
         param_dict = yaml.load(fh, yaml.FullLoader)
     # List for which k-mers models are available
-    if args.nn_directory:
+    if os.path.isdir(args.nn_directory):
         available_mod_dict = {pth.name: str(pth) for pth in Path(args.nn_directory).iterdir() if pth.is_dir()}
         kmer_size_list = list(np.unique([len(x) for x in available_mod_dict]))
     else:
-        available_mod_dict = {pth.name: str(pth) for pth in Path(f'{__location__}/../data/16s_nns/').iterdir() if
-                              pth.is_dir()}
-        kmer_size_list = list(np.unique([len(x) for x in available_mod_dict]))
-    if not len(kmer_size_list):
+        available_mod_dict = {}
         kmer_size_list = [param_dict['kmer_size']]
 
 
