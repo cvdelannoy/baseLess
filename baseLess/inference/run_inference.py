@@ -41,7 +41,7 @@ def main(args):
     # Load read table, start table manager
     pos_reads_dir = parse_output_path(args.out_dir + 'pos_reads')
     read_table = ReadTable(args.fast5_in, pos_reads_dir, predictor)
-    read_manager_process = read_table.init_table()
+    read_manager_process = read_table.init_table(args.batch_size)
     abundance_array = np.zeros(predictor.nb_kmers)  # for abundance estimation mode
 
     # ensure processes are ended after exit

@@ -6,11 +6,11 @@ from baseLess.db_building.TrainingRead import Read
 from baseLess.inference.ReadManager import ReadManager
 
 
-def rolling_window(array, window_size,freq):
+def rolling_window(array, window_size, freq):
     shape = (array.shape[0] - window_size + 1, window_size)
     strides = (array.strides[0],) + array.strides
     rolled = np.lib.stride_tricks.as_strided(array, shape=shape, strides=strides)
-    return rolled[np.arange(0,shape[0],freq)]
+    return rolled[np.arange(0, shape[0], freq)]
 
 
 class ReadTable(object):
@@ -31,11 +31,11 @@ class ReadTable(object):
         self._pred_queue = Queue()
         self._new_read_queue = Queue()
 
-
-    def init_table(self):
+    def init_table(self, batch_size):
         """Initialize table by starting up a manager process and return the process object"""
         manager_process = Process(target=ReadManager, args=(self._new_read_queue,
                                                             self._pred_queue,
+                                                            batch_size,
                                                             self.reads_dir,
                                                             self.pos_reads_dir), name='read_manager')
         manager_process.start()
@@ -50,10 +50,6 @@ class ReadTable(object):
                  index list defining which rows in batch belong to which read,
                  list of unique read indices used in index list)
         """
-        # try:
-        #     read_fn = self._new_read_queue.get_nowait()  # stalls if queue is empty
-        # except Empty:
-        #     return None, None
         ii, fn_list = 0, []
         while ii < read_batch_size and not self._new_read_queue.empty():
             fn_list.append(self._new_read_queue.get_nowait())
