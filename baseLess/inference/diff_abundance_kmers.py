@@ -51,18 +51,25 @@ def main(target_fasta, background_fastas, model_size, kmer_sizes, cores):
     count_df.loc[:, 'lt_quantile_target'] = count_df.loc[:, 'target'] < count_df.loc[:, 'target'].quantile(q=0.50)
     count_df.fillna(0, inplace=True)
     for bg_fn in bg_fn_list:
-        count_df.loc[:, f'lt_quantile_{bg_fn}'] = count_df.loc[:, bg_fn] < count_df.loc[:, bg_fn].quantile(q=0.50)
-        kmers_high = count_df.query(f'lt_quantile_{bg_fn}').iloc[:kmers_per_bg].index  # select k-mers high in target
-        kmers_low = count_df.sort_values(bg_fn, ascending=False).query('lt_quantile_target').iloc[:kmers_per_bg].index  # select k-mers low in target
+
+        # --- kmer selection ---
+        # V1: as used in paper
+        count_df.loc[:, f'ratio_{bg_fn}'] = count_df.target / count_df.loc[:, bg_fn]
+        ratio_series = count_df.loc[~np.in1d(count_df.index, kmer_list), f'ratio_{bg_fn}'].sort_values()
+        kmers_high = ratio_series.iloc[:kmers_per_bg].index
+        kmers_low = ratio_series.iloc[-kmers_per_bg:].index
+
+        ## V2: does not work better after all??
+        # count_df.loc[:, f'lt_quantile_{bg_fn}'] = count_df.loc[:, bg_fn] < count_df.loc[:, bg_fn].quantile(q=0.50)
+        # kmers_high = count_df.query(f'lt_quantile_{bg_fn}').iloc[:kmers_per_bg].index
+        # kmers_low = count_df.sort_values(bg_fn, ascending=False).query('lt_quantile_target').iloc[:kmers_per_bg].index
+
         cur_kmer_list = list(kmers_low) + list(kmers_high)
+        kmer_list.extend(cur_kmer_list)
         kmer_bool = np.in1d(count_df.index, cur_kmer_list)
         sub_df_list.append(count_df.loc[kmer_bool, :])
         count_df = count_df.loc[~kmer_bool, :]  # remove selected k-mers so that next rounds do not select the same again
-        kmer_list.extend(cur_kmer_list)
-        # count_df.loc[:, f'ratio_{bg_fn}'] = count_df.target / count_df.loc[:, bg_fn]
-        # ratio_series = count_df.loc[~np.in1d(count_df.index, kmer_list), f'ratio_{bg_fn}'].sort_values()
-        # kmer_list.extend(ratio_series.iloc[-kmers_per_bg:].index)
-        # kmer_list.extend(ratio_series.iloc[:kmers_per_bg].index)
+
     kmer_list = set(kmer_list)
     sub_df = pd.concat(sub_df_list)
     for cn in ['target'] + bg_fn_list:
@@ -84,7 +91,7 @@ if __name__ == '__main__':
     parser.add_argument('--model-size', type=int, default=25)
     parser.add_argument('--cores', type=int, default=4)
     args = parser.parse_args()
-    kmer_list, freq_df, order_dict = main(args.target_fasta, args.background_fastas, args.model_size, args.kmeer_sizes, args.cores)
+    kmer_list, freq_df, order_dict = main(args.target_fasta, args.background_fastas, args.model_size, args.kmer_sizes, args.cores)
     with open(args.out_kmer_txt, 'w') as fh: fh.write('\n'.join(kmer_list))
     if args.out_freq_table:
         freq_df.to_csv(args.out_freq_table)
