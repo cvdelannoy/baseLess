@@ -1,3 +1,5 @@
+import os
+
 import tarfile
 import numpy as np
 import tensorflow as tf
@@ -9,6 +11,23 @@ from tempfile import TemporaryDirectory
 
 from nns.keras_metrics_from_logits import precision, recall, binary_accuracy
 
+
+def is_within_directory(directory, target):
+    abs_directory = os.path.abspath(directory)
+    abs_target = os.path.abspath(target)
+
+    prefix = os.path.commonprefix([abs_directory, abs_target])
+
+    return prefix == abs_directory
+
+
+def safe_extract(tar, path=".", members=None, *, numeric_owner=False):
+    for member in tar.getmembers():
+        member_path = os.path.join(path, member.name)
+        if not is_within_directory(path, member_path):
+            raise Exception("Attempted Path Traversal in Tar File")
+
+    tar.extractall(path, members, numeric_owner=numeric_owner)
 
 class InferenceModel(object):
     """Composite model of multiple k-mer recognising NNs."""
@@ -35,7 +54,7 @@ class InferenceModel(object):
         """
         with TemporaryDirectory() as td:
             with tarfile.open(mod_fn) as fh:
-                fh.extractall(td)
+                safe_extract(fh, td)
             out_dict = {}
 
             def loss_fun(y_true, y_pred):  # just dummy to satisfy the stupid thing being there
