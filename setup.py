@@ -6,7 +6,7 @@ def readme():
 
 setup(
     name='baseLess',
-    version='0.0.2',
+    version='0.0.3',
     packages=['baseLess'],
     install_requires=[
         'matplotlib==3.5.1',  # avoid issues with heatmaps
